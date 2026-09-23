@@ -100,15 +100,22 @@ plugin `jq79/vite` importa como módulos.
 
 ## Despliegue
 
-Dos workflows de GitHub Actions:
+Workflows de GitHub Actions:
 
 - **`build.yml`**: instala, ejecuta los tests y hace la build. Se lanza en cada push a `main` y en cada
   pull request, y `release.yml` lo reutiliza (`workflow_call`).
 - **`release.yml`**: se lanza a mano desde *Actions → Release → Run workflow* eligiendo `patch`,
-  `minor` o `major`. Ejecuta `build.yml` con la nueva versión y empaqueta la extensión (zip para Chrome,
-  `.xpi` firmado por Mozilla para Firefox). Después hace commit y tag de la versión (`chore(release): x.y.z`),
-  crea la release de GitHub con la build y la extensión adjuntas, y despliega la build en GitHub Pages
-  junto al `.xpi` y su `extension/updates.json`, desde donde Firefox la instala y la actualiza.
+  `minor` o `major`. Ejecuta `build.yml` con la nueva versión y empaqueta la extensión: zip para Chrome y,
+  para Firefox, la sube a Mozilla para que la firme. Después hace commit y tag de la versión
+  (`chore(release): x.y.z`), crea la release de GitHub con la build y la extensión adjuntas, y despliega
+  la build en GitHub Pages junto al `.xpi` y su `extension/updates.json`, desde donde Firefox la instala
+  y la actualiza.
+- **`firefox.yml`**: Mozilla suele firmar la extensión en un minuto, pero a veces la manda a revisión
+  manual y tarda días. La release no la espera más de 5 minutos: sale sin `.xpi` y Pages sigue sirviendo
+  el de la versión anterior. Este workflow comprueba cada 3 horas (o a mano, *Run workflow*) si Mozilla
+  ya ha aprobado la última versión; cuando lo hace, adjunta el `.xpi` a la release y vuelve a desplegar
+  Pages con él. Si Mozilla la rechaza, falla hasta que salga una versión nueva.
+- **`pages.yml`**: el despliegue en Pages que usan los dos anteriores.
 
 Configuración necesaria en el repositorio:
 

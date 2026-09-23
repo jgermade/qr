@@ -1,0 +1,68 @@
+name: Firefox extension
+
+# AMO may keep a release's Firefox extension in review for days, and
+# release.yml doesn't wait for it. This checks every few hours: once AMO has
+# approved the latest release's version, it attaches the signed .xpi to the
+# release and deploys Pages with it, so Firefox installs and updates to it
+on:
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # upload the .xpi to the release
+    outputs:
+      tag: ${{ steps.xpi.outputs.tag }}
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      FIREFOX_EXTENSION_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      # scripts/amo.js
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Download the signed extension
+        id: xpi
+        if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != '' && env.FIREFOX_EXTENSION_ID != ''
+        run: |
+          TAG=$(gh release view --json tagName --jq .tagName 2>/dev/null) || {
+            echo "No release yet"
+            exit 0
+          }
+          VERSION="${TAG#v}"
+          XPI="qr-extension-firefox-v$VERSION.xpi"
+          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qxF "$XPI"; then
+            echo "$TAG already has $XPI"
+            exit 0
+          fi
+          # fails if AMO rejected it: fix it and release a new version
+          node scripts/amo.js download "$VERSION" "$XPI"
+          if [ -f "$XPI" ]; then
+            gh release upload "$TAG" "$XPI"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.tag
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
+    with:
+      tag: ${{ needs.check.outputs.tag }}
