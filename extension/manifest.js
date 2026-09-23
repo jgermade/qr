@@ -1,9 +1,8 @@
 // manifest.json of the extension. Chrome and Firefox take the same MV3
 // manifest except for the background (Chrome runs a service worker, Firefox an
-// event page) and the Gecko settings Chrome rejects as unknown keys
-export const GECKO_ID = "qr@germade.dev"
-
-export function extensionManifest({ target, version, siteUrl }) {
+// event page) and the Gecko settings Chrome rejects as unknown keys. geckoId is
+// the Firefox add-on id, which AMO ties to the account on the first signing
+export function extensionManifest({ target, version, siteUrl, geckoId }) {
   const icons = { 16: "icons/icon-16.png", 32: "icons/icon-32.png", 48: "icons/icon-48.png", 128: "icons/icon-128.png" }
 
   const manifest = {
@@ -24,7 +23,7 @@ export function extensionManifest({ target, version, siteUrl }) {
   if (target === "firefox") {
     manifest.browser_specific_settings = {
       gecko: {
-        id: GECKO_ID,
+        id: geckoId,
         strict_min_version: "140.0",
         // self-hosted: the release deploys the signed .xpi and this file to Pages
         update_url: new URL("extension/updates.json", siteUrl).href,

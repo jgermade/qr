@@ -31,6 +31,8 @@ jobs:
     env:
       # with a custom domain, set the repository variable SITE_URL (ending in /)
       SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+      # the Firefox add-on id, in the extension's manifest and looked up by the app
+      FIREFOX_EXTENSION_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
     steps:
       - uses: actions/checkout@v7
 

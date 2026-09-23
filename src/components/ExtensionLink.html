@@ -3,7 +3,7 @@
 
   let link = null
 
-  extensionLink({ chromeWebStoreId: __CHROME_WEBSTORE_ID__ }).then(found => { link = found })
+  extensionLink().then(found => { link = found })
 </script>
 
 <span :if="link">

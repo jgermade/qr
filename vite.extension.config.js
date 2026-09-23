@@ -9,6 +9,10 @@ const { version } = JSON.parse(readFileSync(new URL("./package.json", import.met
 // there. The build workflow passes it in
 const siteUrl = process.env.SITE_URL || "https://jgermade.github.io/qr/"
 
+// the Firefox add-on id, from the repository variable FIREFOX_EXTENSION_ID.
+// The fallback is only for local and CI builds: the release requires the variable
+const geckoId = process.env.FIREFOX_EXTENSION_ID || "qr@localhost"
+
 const TARGETS = ["chrome", "firefox"]
 
 // `vite build -c vite.extension.config.js --mode firefox` builds
@@ -29,7 +33,7 @@ export default defineConfig(({ mode }) => {
           this.emitFile({
             type: "asset",
             fileName: "manifest.json",
-            source: JSON.stringify(extensionManifest({ target, version, siteUrl }), null, 2),
+            source: JSON.stringify(extensionManifest({ target, version, siteUrl, geckoId }), null, 2),
           })
         },
       },
