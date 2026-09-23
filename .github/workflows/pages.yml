@@ -1,0 +1,80 @@
+name: Pages
+
+# deploys a release to GitHub Pages: the app from the release's own zip, the
+# exact build that was tested and released, plus the newest signed Firefox
+# extension of any release. release.yml runs it after each release, and
+# firefox.yml once AMO approves the extension. Requires Pages to use
+# "GitHub Actions" as its source (Settings > Pages)
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Release whose app is deployed
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # release.yml and firefox.yml may deploy at the same time
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download the app
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download "$TAG" --pattern "qr-$TAG.zip"
+          unzip -q "qr-$TAG.zip" -d dist
+
+      # the signed .xpi next to the app: Firefox installs it from a link (Pages
+      # serves it as application/x-xpinstall, unlike release assets) and checks
+      # updates.json, the manifest's update_url, for new versions. The app shows
+      # its install link only when updates.json is there. AMO may still be
+      # reviewing the latest release's extension: the previous one stays until then
+      - name: Add the Firefox extension
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          GECKO_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
+        run: |
+          # same as build.yml's site_url (a scheduled run's event has no repository name)
+          export SITE_URL="${SITE_URL:-https://$GITHUB_REPOSITORY_OWNER.github.io/${GH_REPO#*/}/}"
+          # releases come newest first
+          LATEST=$(gh api "repos/$GH_REPO/releases?per_page=50" --jq '
+            [.[] | select(.draft | not) | .tag_name as $tag | .assets[]
+              | select(.name | test("^qr-extension-firefox-v.+\\.xpi$")) | "\($tag) \(.name)"][0] // empty')
+          read -r XPI_TAG XPI <<< "$LATEST"
+          if [ -z "$XPI" ]; then
+            echo "::warning::No release has a signed Firefox extension yet"
+            exit 0
+          fi
+          VERSION="${XPI#qr-extension-firefox-v}"
+          export VERSION="${VERSION%.xpi}"
+          mkdir -p dist/extension
+          gh release download "$XPI_TAG" --pattern "$XPI" --dir dist/extension
+          node -e '
+            const { GECKO_ID, VERSION, SITE_URL } = process.env
+            const update_link = new URL(`extension/${process.argv[1]}`, SITE_URL).href
+            console.log(JSON.stringify({ addons: { [GECKO_ID]: { updates: [{ version: VERSION, update_link }] } } }))
+          ' "$XPI" > dist/extension/updates.json
+          cat dist/extension/updates.json
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+      - id: deployment
+        uses: actions/deploy-pages@v5
