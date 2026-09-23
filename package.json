@@ -1,6 +1,6 @@
 {
   "name": "qr",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "PWA para leer y generar códigos QR, hecha con Vite y jq79",
   "license": "ISC",
