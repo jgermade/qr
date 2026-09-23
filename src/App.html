@@ -1,6 +1,7 @@
 <script :setup="{ version }">
   const Generator = await import("./components/Generator.html")
   const Scanner = await import("./components/Scanner.html")
+  const ExtensionLink = await import("./components/ExtensionLink.html")
 
   const HASHES = { generate: "#generar", scan: "#leer" }
 
@@ -54,6 +55,7 @@
   QR v{{ version }} ·
   <a href="https://github.com/jgermade/qr" target="_blank" rel="noopener">código fuente</a> ·
   hecho con <a href="https://github.com/jgermade/jq79" target="_blank" rel="noopener">jq79</a>
+  <ExtensionLink />
 </footer>
 
 <style scoped>

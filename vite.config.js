@@ -24,6 +24,8 @@ export default defineConfig({
   base,
   define: {
     __APP_VERSION__: JSON.stringify(version),
+    // the extension's Chrome Web Store id, once it is published there
+    __CHROME_WEBSTORE_ID__: JSON.stringify(process.env.CHROME_WEBSTORE_ID || ""),
   },
   plugins: [
     jq79(),
@@ -53,6 +55,9 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"],
+        // the Firefox extension (.xpi) and its updates.json are deployed next
+        // to the app: opening them has to reach the network, not the app shell
+        navigateFallbackDenylist: [/\/extension\//],
       },
     }),
   ],

@@ -50,25 +50,31 @@ export function scanVideoFrame(video, canvas) {
   return decodeCanvas(snapshot(video, video.videoWidth, video.videoHeight, 720, canvas))
 }
 
-const loadImage = file =>
+// `source` is a File/Blob or a URL the page can read (a data: URL, say)
+const loadImage = source =>
   new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
+    const url = typeof source === "string" ? source : URL.createObjectURL(source)
+    const done = () => {
+      if (url !== source) URL.revokeObjectURL(url)
+    }
     const img = new Image()
     img.onload = () => {
-      URL.revokeObjectURL(url)
+      done()
       resolve(img)
     }
     img.onerror = () => {
-      URL.revokeObjectURL(url)
+      done()
       reject(new Error("No se pudo abrir la imagen"))
     }
     img.src = url
   })
 
-export async function scanImageFile(file) {
-  const img = await loadImage(file)
-  return decodeCanvas(snapshot(img, img.naturalWidth, img.naturalHeight, 1600))
+export async function scanImage(source, { maxSize = 1600 } = {}) {
+  const img = await loadImage(source)
+  return decodeCanvas(snapshot(img, img.naturalWidth, img.naturalHeight, maxSize))
 }
+
+export const scanImageFile = file => scanImage(file)
 
 export function openCamera() {
   if (!navigator.mediaDevices?.getUserMedia) {

@@ -1,0 +1,11 @@
+<script :setup>
+  const { extensionLink } = await import("../lib/extension.js")
+
+  let link = null
+
+  extensionLink({ chromeWebStoreId: __CHROME_WEBSTORE_ID__ }).then(found => { link = found })
+</script>
+
+<span :if="link">
+  · <a :href="link.href" :target="link.external ? '_blank' : null" :rel="link.external ? 'noopener' : null">{{ link.label }}</a>
+</span>

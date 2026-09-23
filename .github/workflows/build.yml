@@ -15,6 +15,9 @@ on:
       version:
         description: Version the app was built with
         value: ${{ jobs.build.outputs.version }}
+      site_url:
+        description: URL the app is deployed to, which the extension links to and gets its updates from
+        value: ${{ jobs.build.outputs.site_url }}
 
 permissions:
   contents: read
@@ -24,6 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
+      site_url: ${{ env.SITE_URL }}
+    env:
+      # with a custom domain, set the repository variable SITE_URL (ending in /)
+      SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
     steps:
       - uses: actions/checkout@v7
 
@@ -51,9 +58,24 @@ jobs:
           # GitHub Pages serves a project site under /<repo>/. With a custom
           # domain, set the repository variable BASE_PATH to "/"
           BASE_PATH: ${{ vars.BASE_PATH || format('/{0}/', github.event.repository.name) }}
+          # the extension's id once it's in the Chrome Web Store: the app links to it
+          CHROME_WEBSTORE_ID: ${{ vars.CHROME_WEBSTORE_ID }}
+
+      # dist-extension/chrome and dist-extension/firefox
+      - run: npm run build:extension
+
+      # Mozilla's own checks, the ones AMO runs when signing. --self-hosted:
+      # the .xpi is served from Pages, with its own update_url
+      - run: npx --yes web-ext@8 lint --self-hosted --source-dir dist-extension/firefox
 
       - uses: actions/upload-artifact@v7
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension
+          path: dist-extension/
           if-no-files-found: error
