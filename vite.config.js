@@ -26,6 +26,8 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(version),
     // the extension's Chrome Web Store id, once it is published there
     __CHROME_WEBSTORE_ID__: JSON.stringify(process.env.CHROME_WEBSTORE_ID || ""),
+    // the Firefox add-on id: the app looks it up in extension/updates.json
+    __FIREFOX_EXTENSION_ID__: JSON.stringify(process.env.FIREFOX_EXTENSION_ID || ""),
   },
   plugins: [
     jq79(),

@@ -39,6 +39,7 @@ jobs:
       # Firefox: API credentials from https://addons.mozilla.org/developers/addon/api/key/
       AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
       AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      FIREFOX_EXTENSION_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
       # Chrome Web Store (optional): publishing is skipped without them
       CWS_EXTENSION_ID: ${{ vars.CHROME_WEBSTORE_ID }}
       CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
@@ -63,6 +64,11 @@ jobs:
       - name: Sign for Firefox
         if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
         run: |
+          # AMO ties the id to the account for good: never sign the build's fallback
+          if [ -z "$FIREFOX_EXTENSION_ID" ]; then
+            echo "::error::Set the repository variable FIREFOX_EXTENSION_ID (the Firefox add-on id) to sign the extension"
+            exit 1
+          fi
           npx --yes web-ext@8 sign \
             --source-dir dist-extension/firefox \
             --artifacts-dir web-ext-artifacts \
@@ -165,7 +171,7 @@ jobs:
         env:
           VERSION: ${{ needs.build.outputs.version }}
           SITE_URL: ${{ needs.build.outputs.site_url }}
-          GECKO_ID: qr@germade.dev # extension/manifest.js
+          GECKO_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
         run: |
           XPI="qr-extension-firefox-v$VERSION.xpi"
           if [ ! -f "extension-release/$XPI" ]; then

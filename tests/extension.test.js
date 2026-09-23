@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
-import { GECKO_ID, extensionManifest } from "../extension/manifest.js"
+import { extensionManifest } from "../extension/manifest.js"
 import { extensionBrowser, extensionLink } from "../src/lib/extension.js"
 
 const siteUrl = "https://example.github.io/qr/"
+const GECKO_ID = "qr@example.com"
 
 describe("extensionManifest", () => {
   it("runs a service worker in Chrome, with no Gecko settings", () => {
@@ -14,7 +15,7 @@ describe("extensionManifest", () => {
   })
 
   it("runs an event page in Firefox and looks for updates next to the app", () => {
-    const manifest = extensionManifest({ target: "firefox", version: "1.2.3", siteUrl })
+    const manifest = extensionManifest({ target: "firefox", version: "1.2.3", siteUrl, geckoId: GECKO_ID })
     expect(manifest.background).toEqual({ scripts: ["background.js"] })
     expect(manifest.browser_specific_settings.gecko).toMatchObject({
       id: GECKO_ID,
@@ -59,7 +60,7 @@ describe("extensionBrowser", () => {
 describe("extensionLink", () => {
   it("links Firefox to the signed .xpi its updates.json names", async () => {
     const fetch = vi.fn(async () => updatesJson("https://example.github.io/qr/extension/qr-1.0.0.xpi"))
-    expect(await extensionLink({ nav: FIREFOX, fetch })).toEqual({
+    expect(await extensionLink({ nav: FIREFOX, firefoxExtensionId: GECKO_ID, fetch })).toEqual({
       href: "https://example.github.io/qr/extension/qr-1.0.0.xpi",
       label: "Instalar la extensión para Firefox",
       external: false,
@@ -68,15 +69,23 @@ describe("extensionLink", () => {
   })
 
   it("shows nothing in Firefox when the release has no signed .xpi", async () => {
-    expect(await extensionLink({ nav: FIREFOX, fetch: async () => ({ ok: false }) })).toBeNull()
-    expect(await extensionLink({ nav: FIREFOX, fetch: async () => { throw new TypeError("offline") } })).toBeNull()
+    const firefoxExtensionId = GECKO_ID
+    expect(await extensionLink({ nav: FIREFOX, firefoxExtensionId, fetch: async () => ({ ok: false }) })).toBeNull()
+    expect(await extensionLink({ nav: FIREFOX, firefoxExtensionId, fetch: async () => { throw new TypeError("offline") } })).toBeNull()
+  })
+
+  it("shows nothing in Firefox without the add-on id, or with another one", async () => {
+    const fetch = vi.fn(async () => updatesJson("https://example.github.io/qr/extension/qr-1.0.0.xpi"))
+    expect(await extensionLink({ nav: FIREFOX, firefoxExtensionId: "", fetch })).toBeNull()
+    expect(fetch).not.toHaveBeenCalled()
+    expect(await extensionLink({ nav: FIREFOX, firefoxExtensionId: "other@example.com", fetch })).toBeNull()
   })
 
   it("links Chromium browsers to the Web Store, or to the install notes until it's there", async () => {
     expect((await extensionLink({ nav: CHROME, chromeWebStoreId: "abc" })).href).toBe(
       "https://chromewebstore.google.com/detail/abc",
     )
-    expect((await extensionLink({ nav: CHROME })).href).toMatch(/^https:\/\/github\.com\/jgermade\/qr#/)
+    expect((await extensionLink({ nav: CHROME, chromeWebStoreId: "" })).href).toMatch(/^https:\/\/github\.com\/jgermade\/qr#/)
   })
 
   it("shows nothing in other browsers", async () => {

@@ -119,7 +119,10 @@ Configuración necesaria en el repositorio:
    [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/)
    con una cuenta de Mozilla: *Generate new credentials*; el «JWT issuer» es `AMO_JWT_ISSUER` y el
    «JWT secret», `AMO_JWT_SECRET`. Sin ellos la release sale sin `.xpi` y la app no muestra el enlace de
-   Firefox.
+   Firefox. Con ellos hace falta también la variable `FIREFOX_EXTENSION_ID`
+   (*Settings → Secrets and variables → Actions → Variables*): el id de la extensión en Firefox, con forma
+   de email (`qr@tudominio.com`) aunque no tiene por qué existir. AMO lo asocia a tu cuenta al firmar la
+   primera versión y no se puede cambiar después sin publicar otra extensión.
 4. Opcional, Chrome Web Store: la variable `CHROME_WEBSTORE_ID` (el id de la extensión, tras publicarla a
    mano la primera vez) y los secrets `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET` y `CWS_REFRESH_TOKEN`
    ([cómo obtenerlos](https://github.com/fregante/chrome-webstore-upload-keys)). Con ellos cada release
