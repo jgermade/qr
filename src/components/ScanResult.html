@@ -1,0 +1,130 @@
+<script :setup="{ payload }">
+  const { parsePayload } = await import("../lib/payload.js")
+  const { flasher } = await import("../lib/ui.js")
+
+  let notice = ""
+
+  $: info = parsePayload(payload)
+
+  const flash = flasher(message => { notice = message })
+
+  const copy = async (value, message = "Copiado") => {
+    try {
+      await navigator.clipboard.writeText(value)
+      flash(message)
+    } catch {
+      flash("No se pudo copiar")
+    }
+  }
+
+  const canShare = typeof navigator.share === "function"
+
+  const share = async () => {
+    try {
+      await navigator.share({ text: payload })
+    } catch {
+      // cancelled by the user
+    }
+  }
+</script>
+
+<article class="card result">
+  <span class="badge">{{ info.label }}</span>
+
+  <dl :if="info.type === 'wifi'" class="details">
+    <div><dt>Red</dt><dd>{{ info.ssid }}</dd></div>
+    <div><dt>Seguridad</dt><dd>{{ info.securityLabel }}</dd></div>
+    <div :if="info.password"><dt>Contraseña</dt><dd class="mono">{{ info.password }}</dd></div>
+    <div :if="info.hidden"><dt>Red oculta</dt><dd>Sí</dd></div>
+  </dl>
+  <p :else class="content">{{ info.type === "contact" && info.name ? info.name : payload }}</p>
+
+  <div class="actions">
+    <a :if="info.href" class="btn primary" :href="info.href"
+      :target="info.type === 'url' || info.type === 'geo' ? '_blank' : null" rel="noopener noreferrer">{{ info.action }}</a>
+    <button :if="info.type === 'wifi' && info.password" type="button" class="btn primary"
+      @click="copy(info.password, 'Contraseña copiada')">Copiar contraseña</button>
+    <button type="button" class="btn" @click="copy(payload)">Copiar texto</button>
+    <button :if="canShare" type="button" class="btn" @click="share">Compartir</button>
+  </div>
+
+  <p class="notice" role="status">{{ notice }}</p>
+</article>
+
+<style scoped>
+  .result {
+    display: grid;
+    gap: 12px;
+    justify-items: start;
+    animation: qr-result-in 0.2s ease-out;
+  }
+
+  @keyframes qr-result-in {
+    from { opacity: 0; transform: translateY(6px); }
+  }
+
+  .badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .content {
+    margin: 0;
+    width: 100%;
+    font-size: 1.05rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 40vh;
+    overflow: auto;
+  }
+
+  .details {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+  }
+
+  .details div {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .details dt {
+    color: var(--muted);
+  }
+
+  .details dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .notice {
+    margin: 0;
+    min-height: 1.3em;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+</style>

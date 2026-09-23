@@ -1,0 +1,31 @@
+{
+  "name": "qr",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PWA para leer y generar códigos QR, hecha con Vite y jq79",
+  "license": "ISC",
+  "author": "Jesus Germade <jesus@germade.dev>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jgermade/qr.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "jq79": "^0.7.2",
+    "jsqr": "^1.4.0",
+    "uqr": "^0.1.3"
+  },
+  "devDependencies": {
+    "jsdom": "^30.1.1",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^5.0.1"
+  }
+}
