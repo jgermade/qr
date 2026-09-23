@@ -60,9 +60,11 @@ jobs:
           mkdir -p out
           (cd dist-extension/chrome && zip -qr "../../out/qr-extension-chrome-v$VERSION.zip" .)
 
-      # unlisted: AMO signs it without listing it, and it's installed from Pages
+      # unlisted: AMO signs it without listing it, and it's installed from Pages.
+      # Approval usually takes minutes but can exceed web-ext's default 15 min wait
       - name: Sign for Firefox
         if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
+        timeout-minutes: 70
         run: |
           # AMO ties the id to the account for good: never sign the build's fallback
           if [ -z "$FIREFOX_EXTENSION_ID" ]; then
@@ -73,6 +75,7 @@ jobs:
             --source-dir dist-extension/firefox \
             --artifacts-dir web-ext-artifacts \
             --channel unlisted \
+            --approval-timeout 3600000 \
             --api-key "$AMO_JWT_ISSUER" \
             --api-secret "$AMO_JWT_SECRET"
           mv web-ext-artifacts/*.xpi "out/qr-extension-firefox-v$VERSION.xpi"
