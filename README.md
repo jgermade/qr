@@ -29,6 +29,26 @@ Hecha con [Vite](https://vite.dev) y [jq79](https://github.com/jgermade/jq79).
   toda la app: funciona sin conexión y se actualiza sola.
 - Accesos directos a «Leer» y «Generar» desde el icono.
 
+**Extensión para el navegador** (Chrome, Edge y Firefox)
+
+- El botón de la barra genera el QR de la página que estás viendo, y lee el QR que aparezca en la pestaña.
+- Menú contextual: generar el QR de la página, de un enlace o del texto seleccionado, y leer el QR de una
+  imagen o de la pantalla.
+- Sin permisos sobre las webs: solo `activeTab` (la pestaña actual cuando pulsas el botón o el menú),
+  `contextMenus` y `storage`.
+
+## Extensión para el navegador
+
+**Firefox**: la app muestra en el pie «Instalar la extensión para Firefox», que la instala con un clic. Se
+actualiza sola con cada release.
+
+**Chrome / Edge**: Chrome solo instala extensiones desde la Chrome Web Store. Mientras no esté publicada:
+
+1. Descarga `qr-extension-chrome-vX.Y.Z.zip` de la [última release](https://github.com/jgermade/qr/releases/latest)
+   y descomprímelo.
+2. Abre `chrome://extensions` (o `edge://extensions`) y activa el **Modo desarrollador**.
+3. **Cargar descomprimida** → elige la carpeta.
+
 ## Desarrollo
 
 ```sh
@@ -37,7 +57,12 @@ npm run dev       # servidor de desarrollo con HMR
 npm test          # tests (Vitest)
 npm run build     # build de producción en dist/
 npm run preview   # sirve dist/
+npm run build:extension   # extensión en dist-extension/chrome y dist-extension/firefox
 ```
+
+Para probar la extensión, carga `dist-extension/chrome` en `chrome://extensions` (Modo desarrollador →
+Cargar descomprimida) o `dist-extension/firefox` en `about:debugging` → Este Firefox → Cargar complemento
+temporal. `npx web-ext run -s dist-extension/firefox` abre un Firefox limpio con ella.
 
 La cámara necesita un contexto seguro: `localhost` vale, pero para probar desde el móvil hace falta HTTPS.
 
@@ -56,9 +81,19 @@ src/lib/
   scan.js                  decodificación (BarcodeDetector / jsQR) y cámara
   payload.js               formatos: WiFi, enlaces, email, teléfono…
   history.js               historial en localStorage
+  extension.js             enlace a la extensión según el navegador
+extension/
+  manifest.js              manifest.json de Chrome y de Firefox
+  popup.html, popup.js     popup (y ventana del menú contextual)
+  background.js            menú contextual
+  public/icons/            iconos de la extensión
+vite.extension.config.js   build de la extensión
 tests/                     tests de la lógica y de los componentes
 public/                    iconos y favicon
 ```
+
+La extensión reutiliza `src/lib`, pero no los componentes: jq79 compila las plantillas con `new Function`,
+y la CSP de las extensiones (Manifest V3) no permite `unsafe-eval`. El popup es DOM plano.
 
 Los componentes son ficheros `.html` de jq79 (`<script :setup>`, plantilla y `<style scoped>`), que el
 plugin `jq79/vite` importa como módulos.
@@ -70,13 +105,25 @@ Dos workflows de GitHub Actions:
 - **`build.yml`**: instala, ejecuta los tests y hace la build. Se lanza en cada push a `main` y en cada
   pull request, y `release.yml` lo reutiliza (`workflow_call`).
 - **`release.yml`**: se lanza a mano desde *Actions → Release → Run workflow* eligiendo `patch`,
-  `minor` o `major`. Ejecuta `build.yml` con la nueva versión, hace commit y tag de la versión
-  (`chore(release): x.y.z`), crea la release de GitHub con la build en un zip y despliega esa misma
-  build en GitHub Pages.
+  `minor` o `major`. Ejecuta `build.yml` con la nueva versión y empaqueta la extensión (zip para Chrome,
+  `.xpi` firmado por Mozilla para Firefox). Después hace commit y tag de la versión (`chore(release): x.y.z`),
+  crea la release de GitHub con la build y la extensión adjuntas, y despliega la build en GitHub Pages
+  junto al `.xpi` y su `extension/updates.json`, desde donde Firefox la instala y la actualiza.
 
 Configuración necesaria en el repositorio:
 
 1. *Settings → Pages → Build and deployment → Source*: **GitHub Actions**.
 2. Si `main` está protegida, permitir que `github-actions[bot]` haga push (el commit de la versión).
+3. Para firmar la extensión de Firefox, los secrets `AMO_JWT_ISSUER` y `AMO_JWT_SECRET`
+   (*Settings → Secrets and variables → Actions → New repository secret*). Se generan en
+   [addons.mozilla.org/developers/addon/api/key](https://addons.mozilla.org/developers/addon/api/key/)
+   con una cuenta de Mozilla: *Generate new credentials*; el «JWT issuer» es `AMO_JWT_ISSUER` y el
+   «JWT secret», `AMO_JWT_SECRET`. Sin ellos la release sale sin `.xpi` y la app no muestra el enlace de
+   Firefox.
+4. Opcional, Chrome Web Store: la variable `CHROME_WEBSTORE_ID` (el id de la extensión, tras publicarla a
+   mano la primera vez) y los secrets `CWS_CLIENT_ID`, `CWS_CLIENT_SECRET` y `CWS_REFRESH_TOKEN`
+   ([cómo obtenerlos](https://github.com/fregante/chrome-webstore-upload-keys)). Con ellos cada release
+   publica la nueva versión y la app enlaza a la tienda.
+5. Con dominio propio, la variable `SITE_URL` (la URL de la app, acabada en `/`), además de `BASE_PATH`.
 3. La app se construye para servirse en `/<repo>/`. Con un dominio propio, crea la variable de
    repositorio `BASE_PATH` con valor `/` (*Settings → Secrets and variables → Actions → Variables*).

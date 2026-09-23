@@ -15,7 +15,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:extension": "vite build -c vite.extension.config.js --mode chrome && vite build -c vite.extension.config.js --mode firefox"
   },
   "dependencies": {
     "jq79": "^0.7.2",

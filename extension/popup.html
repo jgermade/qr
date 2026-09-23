@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QR</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <img class="logo" src="./icons/icon-32.png" alt="" width="24" height="24" />
+      <strong>QR</strong>
+      <a id="app-link" class="app-link" target="_blank" rel="noopener">Abrir la app</a>
+    </header>
+
+    <main class="content">
+      <section class="card">
+        <label class="field">
+          <span>Contenido</span>
+          <textarea id="text" rows="3" placeholder="Escribe un texto o pega un enlace…"></textarea>
+        </label>
+        <div id="preview" class="preview"></div>
+        <p id="error" class="message error" hidden></p>
+        <div class="actions">
+          <button type="button" id="png" class="btn primary">Descargar PNG</button>
+          <button type="button" id="svg" class="btn">SVG</button>
+          <button type="button" id="copy" class="btn" hidden>Copiar</button>
+        </div>
+      </section>
+
+      <section id="scan-card" class="card">
+        <button type="button" id="scan" class="btn wide">Leer el QR de la pestaña</button>
+        <div id="result" class="result" hidden>
+          <p id="result-label" class="result-label"></p>
+          <p id="result-text" class="result-text"></p>
+          <div class="actions">
+            <a id="result-open" class="btn primary" target="_blank" rel="noopener noreferrer" hidden></a>
+            <button type="button" id="result-copy" class="btn">Copiar texto</button>
+            <button type="button" id="result-generate" class="btn">Generar su QR</button>
+          </div>
+        </div>
+      </section>
+
+      <p id="notice" class="notice" role="status"></p>
+    </main>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>

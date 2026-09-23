@@ -1,0 +1,121 @@
+body {
+  width: 360px;
+  min-height: 0;
+}
+
+/* opened as a window from the context menu */
+@media (min-width: 380px) {
+  body {
+    width: auto;
+  }
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  display: block;
+}
+
+.app-link {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.content {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.card {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.preview {
+  width: 220px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.preview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.message {
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.message.error {
+  color: var(--danger);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions .btn {
+  flex: 1 1 0;
+}
+
+.actions .primary {
+  flex-basis: 100%;
+}
+
+.btn.wide {
+  width: 100%;
+}
+
+.result {
+  display: grid;
+  gap: 8px;
+}
+
+.result-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.result-text {
+  margin: 0;
+  max-height: 8em;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.notice {
+  margin: 0;
+  min-height: 1.3em;
+  text-align: center;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+[hidden] {
+  display: none !important;
+}

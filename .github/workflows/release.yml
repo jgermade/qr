@@ -29,8 +29,66 @@ jobs:
     with:
       bump: ${{ inputs.bump }}
 
-  release:
+  # the extension, packaged before anything is tagged: a signing failure stops
+  # the release instead of leaving it half done
+  extension:
     needs: build
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      # Firefox: API credentials from https://addons.mozilla.org/developers/addon/api/key/
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+      # Chrome Web Store (optional): publishing is skipped without them
+      CWS_EXTENSION_ID: ${{ vars.CHROME_WEBSTORE_ID }}
+      CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+      CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+      CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: extension
+          path: dist-extension
+
+      - name: Package for Chrome
+        run: |
+          mkdir -p out
+          (cd dist-extension/chrome && zip -qr "../../out/qr-extension-chrome-v$VERSION.zip" .)
+
+      # unlisted: AMO signs it without listing it, and it's installed from Pages
+      - name: Sign for Firefox
+        if: env.AMO_JWT_ISSUER != '' && env.AMO_JWT_SECRET != ''
+        run: |
+          npx --yes web-ext@8 sign \
+            --source-dir dist-extension/firefox \
+            --artifacts-dir web-ext-artifacts \
+            --channel unlisted \
+            --api-key "$AMO_JWT_ISSUER" \
+            --api-secret "$AMO_JWT_SECRET"
+          mv web-ext-artifacts/*.xpi "out/qr-extension-firefox-v$VERSION.xpi"
+
+      - name: Publish to the Chrome Web Store
+        if: env.CWS_EXTENSION_ID != '' && env.CWS_REFRESH_TOKEN != ''
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 \
+            --source "out/qr-extension-chrome-v$VERSION.zip" \
+            --extension-id "$CWS_EXTENSION_ID" \
+            --client-id "$CWS_CLIENT_ID" \
+            --client-secret "$CWS_CLIENT_SECRET" \
+            --refresh-token "$CWS_REFRESH_TOKEN"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: extension-release
+          path: out/
+          if-no-files-found: error
+
+  release:
+    needs: [build, extension]
     runs-on: ubuntu-latest
     permissions:
       contents: write # push the version bump and create the release
@@ -64,18 +122,23 @@ jobs:
           name: dist
           path: dist
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: extension-release
+          path: extension-release
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.bump.outputs.tag }}
         run: |
           (cd dist && zip -qr "../qr-$TAG.zip" .)
-          gh release create "$TAG" "qr-$TAG.zip" --title "$TAG" --generate-notes
+          gh release create "$TAG" "qr-$TAG.zip" extension-release/* --title "$TAG" --generate-notes
 
   # the exact build that was tested and released. Requires Pages to use
   # "GitHub Actions" as its source (Settings > Pages)
   deploy:
-    needs: release
+    needs: [build, release]
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -88,6 +151,35 @@ jobs:
         with:
           name: dist
           path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: extension-release
+          path: extension-release
+
+      # the signed .xpi next to the app: Firefox installs it from a link (Pages
+      # serves it as application/x-xpinstall, unlike release assets) and checks
+      # updates.json, the manifest's update_url, for new versions. The app shows
+      # its install link only when updates.json is there
+      - name: Add the Firefox extension
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          SITE_URL: ${{ needs.build.outputs.site_url }}
+          GECKO_ID: qr@germade.dev # extension/manifest.js
+        run: |
+          XPI="qr-extension-firefox-v$VERSION.xpi"
+          if [ ! -f "extension-release/$XPI" ]; then
+            echo "::warning::No signed Firefox extension in this release (AMO_JWT_ISSUER / AMO_JWT_SECRET not set)"
+            exit 0
+          fi
+          mkdir -p dist/extension
+          cp "extension-release/$XPI" dist/extension/
+          node -e '
+            const { GECKO_ID, VERSION, SITE_URL } = process.env
+            const update_link = new URL(`extension/${process.argv[1]}`, SITE_URL).href
+            console.log(JSON.stringify({ addons: { [GECKO_ID]: { updates: [{ version: VERSION, update_link }] } } }))
+          ' "$XPI" > dist/extension/updates.json
+          cat dist/extension/updates.json
 
       - uses: actions/configure-pages@v6
 
